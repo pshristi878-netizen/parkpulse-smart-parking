@@ -18,6 +18,12 @@ import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedAdminLotsRouteImport } from './routes/_authenticated/admin/lots'
+import { Route as AuthenticatedAdminSlotsRouteImport } from './routes/_authenticated/admin/slots'
+import { Route as AuthenticatedAdminReservationsRouteImport } from './routes/_authenticated/admin/reservations'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
 import { Route as AuthenticatedReservationsIndexRouteImport } from './routes/_authenticated/reservations.index'
 import { Route as AuthenticatedReservationsIdRouteImport } from './routes/_authenticated/reservations.$id'
 import { Route as AuthenticatedLotsIdRouteImport } from './routes/_authenticated/lots.$id'
@@ -67,6 +73,36 @@ const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
+} as any)
+const AuthenticatedAdminLotsRoute = AuthenticatedAdminLotsRouteImport.update({
+  id: '/lots',
+  path: '/lots',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
+} as any)
+const AuthenticatedAdminSlotsRoute = AuthenticatedAdminSlotsRouteImport.update({
+  id: '/slots',
+  path: '/slots',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
+} as any)
+const AuthenticatedAdminReservationsRoute = AuthenticatedAdminReservationsRouteImport.update({
+  id: '/reservations',
+  path: '/reservations',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
+} as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
+} as any)
 const AuthenticatedReservationsIndexRoute =
   AuthenticatedReservationsIndexRouteImport.update({
     id: '/reservations/',
@@ -94,6 +130,11 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/vehicles': typeof AuthenticatedVehiclesRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
+  '/admin/lots': typeof AuthenticatedAdminLotsRoute
+  '/admin/slots': typeof AuthenticatedAdminSlotsRoute
+  '/admin/reservations': typeof AuthenticatedAdminReservationsRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/lots/$id': typeof AuthenticatedLotsIdRoute
   '/reservations/$id': typeof AuthenticatedReservationsIdRoute
   '/reservations/': typeof AuthenticatedReservationsIndexRoute
@@ -107,6 +148,11 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/vehicles': typeof AuthenticatedVehiclesRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
+  '/admin/lots': typeof AuthenticatedAdminLotsRoute
+  '/admin/slots': typeof AuthenticatedAdminSlotsRoute
+  '/admin/reservations': typeof AuthenticatedAdminReservationsRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/lots/$id': typeof AuthenticatedLotsIdRoute
   '/reservations/$id': typeof AuthenticatedReservationsIdRoute
   '/reservations': typeof AuthenticatedReservationsIndexRoute
@@ -122,6 +168,12 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/vehicles': typeof AuthenticatedVehiclesRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/admin/lots': typeof AuthenticatedAdminLotsRoute
+  '/_authenticated/admin/slots': typeof AuthenticatedAdminSlotsRoute
+  '/_authenticated/admin/reservations': typeof AuthenticatedAdminReservationsRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/lots/$id': typeof AuthenticatedLotsIdRoute
   '/_authenticated/reservations/$id': typeof AuthenticatedReservationsIdRoute
   '/_authenticated/reservations/': typeof AuthenticatedReservationsIndexRoute
@@ -137,6 +189,11 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/vehicles'
+    | '/admin'
+    | '/admin/lots'
+    | '/admin/slots'
+    | '/admin/reservations'
+    | '/admin/users'
     | '/lots/$id'
     | '/reservations/$id'
     | '/reservations/'
@@ -150,6 +207,11 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/vehicles'
+    | '/admin'
+    | '/admin/lots'
+    | '/admin/slots'
+    | '/admin/reservations'
+    | '/admin/users'
     | '/lots/$id'
     | '/reservations/$id'
     | '/reservations'
@@ -164,6 +226,12 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/search'
     | '/_authenticated/vehicles'
+    | '/_authenticated/admin'
+    | '/_authenticated/admin/'
+    | '/_authenticated/admin/lots'
+    | '/_authenticated/admin/slots'
+    | '/_authenticated/admin/reservations'
+    | '/_authenticated/admin/users'
     | '/_authenticated/lots/$id'
     | '/_authenticated/reservations/$id'
     | '/_authenticated/reservations/'
@@ -241,6 +309,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/lots': {
+      id: '/_authenticated/admin/lots'
+      path: '/lots'
+      fullPath: '/admin/lots'
+      preLoaderRoute: typeof AuthenticatedAdminLotsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/slots': {
+      id: '/_authenticated/admin/slots'
+      path: '/slots'
+      fullPath: '/admin/slots'
+      preLoaderRoute: typeof AuthenticatedAdminSlotsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/reservations': {
+      id: '/_authenticated/admin/reservations'
+      path: '/reservations'
+      fullPath: '/admin/reservations'
+      preLoaderRoute: typeof AuthenticatedAdminReservationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/reservations/': {
       id: '/_authenticated/reservations/'
       path: '/reservations'
@@ -265,12 +375,32 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminLotsRoute: typeof AuthenticatedAdminLotsRoute
+  AuthenticatedAdminSlotsRoute: typeof AuthenticatedAdminSlotsRoute
+  AuthenticatedAdminReservationsRoute: typeof AuthenticatedAdminReservationsRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+}
+
+const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren = {
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminLotsRoute: AuthenticatedAdminLotsRoute,
+  AuthenticatedAdminSlotsRoute: AuthenticatedAdminSlotsRoute,
+  AuthenticatedAdminReservationsRoute: AuthenticatedAdminReservationsRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+}
+
+const AuthenticatedAdminRouteRouteWithChildren =
+  AuthenticatedAdminRouteRoute._addFileChildren(AuthenticatedAdminRouteRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedVehiclesRoute: typeof AuthenticatedVehiclesRoute
+  AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedLotsIdRoute: typeof AuthenticatedLotsIdRoute
   AuthenticatedReservationsIdRoute: typeof AuthenticatedReservationsIdRoute
   AuthenticatedReservationsIndexRoute: typeof AuthenticatedReservationsIndexRoute
@@ -282,6 +412,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedVehiclesRoute: AuthenticatedVehiclesRoute,
+  AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedLotsIdRoute: AuthenticatedLotsIdRoute,
   AuthenticatedReservationsIdRoute: AuthenticatedReservationsIdRoute,
   AuthenticatedReservationsIndexRoute: AuthenticatedReservationsIndexRoute,

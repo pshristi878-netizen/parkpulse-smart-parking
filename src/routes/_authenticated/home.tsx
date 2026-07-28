@@ -11,6 +11,10 @@ import {
   Search,
   Star,
   Zap,
+  ParkingCircle,
+  CheckCircle2,
+  XCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { Logo } from "@/components/park/Logo";
 import { BottomNav } from "@/components/park/BottomNav";
@@ -42,10 +46,16 @@ type Lot = {
   total_slots: number;
 };
 
+type SlotStat = {
+  lot_id: string;
+  status: string;
+};
+
 function HomePage() {
   const navigate = useNavigate();
   const [name, setName] = useState("there");
   const [query, setQuery] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -54,6 +64,19 @@ function HomePage() {
         | undefined;
       const n = meta?.full_name || meta?.name || data.user?.email?.split("@")[0];
       if (n) setName(n.split(" ")[0]);
+
+      // Check admin role
+      if (data.user) {
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "admin")
+          .maybeSingle()
+          .then(({ data: roleData }) => {
+            if (roleData) setIsAdmin(true);
+          });
+      }
     });
   }, []);
 
@@ -71,6 +94,42 @@ function HomePage() {
       return data as Lot[];
     },
   });
+
+  // Real-time slot availability
+  const { data: slotStats = [] } = useQuery({
+    queryKey: ["slot_availability"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("parking_slots")
+        .select("lot_id,status");
+      if (error) throw error;
+      return data as SlotStat[];
+    },
+    refetchInterval: 10000,
+  });
+
+  const availabilityMap = useMemo(() => {
+    const map: Record<string, { available: number; total: number; occupied: number; reserved: number }> = {};
+    slotStats.forEach((s) => {
+      if (!map[s.lot_id]) map[s.lot_id] = { available: 0, total: 0, occupied: 0, reserved: 0 };
+      map[s.lot_id].total++;
+      if (s.status === "available") map[s.lot_id].available++;
+      if (s.status === "occupied") map[s.lot_id].occupied++;
+      if (s.status === "reserved") map[s.lot_id].reserved++;
+    });
+    return map;
+  }, [slotStats]);
+
+  const globalStats = useMemo(() => {
+    const totals = { available: 0, total: 0, occupied: 0, reserved: 0, lots: lots.length };
+    Object.values(availabilityMap).forEach((v) => {
+      totals.available += v.available;
+      totals.total += v.total;
+      totals.occupied += v.occupied;
+      totals.reserved += v.reserved;
+    });
+    return totals;
+  }, [availabilityMap, lots]);
 
   const { data: activeRes } = useQuery({
     queryKey: ["active_reservation"],
@@ -110,6 +169,15 @@ function HomePage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
           <Logo size="sm" />
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="rounded-full border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary shadow-soft hover:bg-primary/20"
+              >
+                <ShieldCheck className="inline h-3.5 w-3.5 mr-1" />
+                Admin
+              </Link>
+            )}
             <Link
               to="/notifications"
               className="rounded-full border border-border bg-card p-2.5 shadow-soft hover:bg-secondary"
@@ -140,6 +208,72 @@ function HomePage() {
           </p>
         </motion.div>
 
+        {/* Real-time Availability Dashboard */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="mt-5 rounded-3xl border border-border bg-card p-4 shadow-soft"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
+              Live Availability
+            </h2>
+            <span className="text-[10px] text-muted-foreground">Updates every 10s</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <DashStat
+              icon={ParkingCircle}
+              label="Total Lots"
+              value={globalStats.lots}
+              color="text-primary"
+            />
+            <DashStat
+              icon={CheckCircle2}
+              label="Available"
+              value={globalStats.available}
+              color="text-primary"
+            />
+            <DashStat
+              icon={XCircle}
+              label="Occupied"
+              value={globalStats.occupied}
+              color="text-destructive"
+            />
+            <DashStat
+              icon={Clock}
+              label="Reserved"
+              value={globalStats.reserved}
+              color="text-warning"
+            />
+          </div>
+          {/* Availability bar */}
+          {globalStats.total > 0 && (
+            <div className="mt-3">
+              <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="bg-slot-available transition-all"
+                  style={{ width: `${(globalStats.available / globalStats.total) * 100}%` }}
+                />
+                <div
+                  className="bg-slot-reserved transition-all"
+                  style={{ width: `${(globalStats.reserved / globalStats.total) * 100}%` }}
+                />
+                <div
+                  className="bg-slot-occupied transition-all"
+                  style={{ width: `${(globalStats.occupied / globalStats.total) * 100}%` }}
+                />
+              </div>
+              <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground">
+                <span>{Math.round((globalStats.available / globalStats.total) * 100)}% free</span>
+                <span>{globalStats.total} total slots</span>
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Search */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -221,7 +355,7 @@ function HomePage() {
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {filtered.map((lot, i) => (
-              <LotCard key={lot.id} lot={lot} index={i} />
+              <LotCard key={lot.id} lot={lot} index={i} availability={availabilityMap[lot.id]} />
             ))}
             {filtered.length === 0 && (
               <div className="col-span-full rounded-3xl border border-dashed border-border bg-card/60 p-10 text-center text-sm text-muted-foreground">
@@ -237,14 +371,35 @@ function HomePage() {
   );
 }
 
+function DashStat({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  color: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl bg-secondary p-3">
+      <Icon className={`h-5 w-5 ${color}`} />
+      <div>
+        <p className="text-lg font-bold leading-tight">{value}</p>
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 function QuickAction({
   to,
   icon: Icon,
   label,
 }: {
   to: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
 }) {
   return (
@@ -260,7 +415,7 @@ function QuickAction({
   );
 }
 
-function LotCard({ lot, index }: { lot: Lot; index: number }) {
+function LotCard({ lot, index, availability }: { lot: Lot; index: number; availability?: { available: number; total: number } }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -284,6 +439,13 @@ function LotCard({ lot, index }: { lot: Lot; index: number }) {
           <div className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold shadow-soft">
             ${Number(lot.hourly_price).toFixed(2)}/hr
           </div>
+          {/* Availability badge */}
+          {availability && (
+            <div className="absolute left-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur">
+              <CheckCircle2 className="inline h-3 w-3 mr-0.5 text-green-400" />
+              {availability.available}/{availability.total} free
+            </div>
+          )}
         </div>
         <div className="p-4">
           <div className="flex items-start justify-between gap-2">
