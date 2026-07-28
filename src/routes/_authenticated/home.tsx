@@ -140,15 +140,39 @@ function HomePage() {
           </p>
         </motion.div>
 
-        <div className="mt-5 flex items-center gap-2 rounded-full border border-border bg-card px-4 py-3 shadow-soft">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            document
+              .getElementById("nearby-parking")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          className="mt-5 flex items-center gap-2 rounded-full border border-border bg-card p-1.5 pl-4 shadow-soft focus-within:border-primary"
+        >
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name, address, city…"
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
           />
-        </div>
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+          <button
+            type="submit"
+            className="rounded-full bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow transition hover:opacity-95"
+          >
+            Search
+          </button>
+        </form>
 
         {activeRes && (
           <Link
@@ -179,7 +203,7 @@ function HomePage() {
           <QuickAction to="/profile" icon={Clock} label="Profile" />
         </div>
 
-        <div className="mt-8 flex items-baseline justify-between">
+        <div id="nearby-parking" className="mt-8 flex items-baseline justify-between scroll-mt-20">
           <h2 className="text-lg font-semibold">Nearby parking</h2>
           <span className="text-xs text-muted-foreground">
             {filtered.length} lot{filtered.length === 1 ? "" : "s"}
