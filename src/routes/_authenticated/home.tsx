@@ -1,15 +1,27 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Bell, LogOut, MapPin, Search } from "lucide-react";
+import {
+  Bell,
+  Car,
+  Clock,
+  History,
+  LogOut,
+  MapPin,
+  Search,
+  Star,
+  Zap,
+} from "lucide-react";
 import { Logo } from "@/components/park/Logo";
+import { BottomNav } from "@/components/park/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
     meta: [
-      { title: "Home — ParkPulse" },
+      { title: "Dashboard — ParkPulse" },
       { name: "description", content: "Find parking near you." },
       { name: "robots", content: "noindex" },
     ],
@@ -17,9 +29,23 @@ export const Route = createFileRoute("/_authenticated/home")({
   component: HomePage,
 });
 
+type Lot = {
+  id: string;
+  name: string;
+  address: string;
+  city: string | null;
+  hourly_price: number;
+  image_url: string | null;
+  rating: number | null;
+  review_count: number;
+  amenities: string[] | null;
+  total_slots: number;
+};
+
 function HomePage() {
   const navigate = useNavigate();
   const [name, setName] = useState("there");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -31,6 +57,47 @@ function HomePage() {
     });
   }, []);
 
+  const { data: lots = [], isLoading } = useQuery({
+    queryKey: ["parking_lots"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("parking_lots")
+        .select(
+          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots",
+        )
+        .eq("is_active", true)
+        .order("rating", { ascending: false });
+      if (error) throw error;
+      return data as Lot[];
+    },
+  });
+
+  const { data: activeRes } = useQuery({
+    queryKey: ["active_reservation"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("reservations")
+        .select("id,lot_id,status,end_time,total_amount")
+        .in("status", ["pending", "confirmed", "active"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    refetchInterval: 20000,
+  });
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return lots;
+    return lots.filter(
+      (l) =>
+        l.name.toLowerCase().includes(q) ||
+        l.address.toLowerCase().includes(q) ||
+        (l.city || "").toLowerCase().includes(q),
+    );
+  }, [lots, query]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
     toast.success("Signed out");
@@ -38,14 +105,17 @@ function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-32">
       <header className="sticky top-0 z-40 glass">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Logo />
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+          <Logo size="sm" />
           <div className="flex items-center gap-2">
-            <button className="rounded-full border border-border bg-card p-2.5 shadow-soft hover:bg-secondary">
+            <Link
+              to="/notifications"
+              className="rounded-full border border-border bg-card p-2.5 shadow-soft hover:bg-secondary"
+            >
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               onClick={signOut}
               className="rounded-full border border-border bg-card p-2.5 shadow-soft hover:bg-secondary"
@@ -57,7 +127,7 @@ function HomePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 pt-8">
+      <main className="mx-auto max-w-6xl px-5 pt-6">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -70,25 +140,155 @@ function HomePage() {
           </p>
         </motion.div>
 
-        <div className="mt-6 flex items-center gap-2 rounded-3xl border border-border bg-card px-4 py-3 shadow-soft">
+        <div className="mt-5 flex items-center gap-2 rounded-full border border-border bg-card px-4 py-3 shadow-soft">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
-            placeholder="Search parking by location, name…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by name, address, city…"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
 
-        <section className="mt-10 rounded-4xl border border-dashed border-border bg-card/60 p-10 text-center">
-          <div className="mx-auto mb-3 inline-flex rounded-2xl bg-accent p-3">
-            <MapPin className="h-6 w-6 text-primary" />
+        {activeRes && (
+          <Link
+            to="/reservations/$id"
+            params={{ id: activeRes.id }}
+            className="mt-5 block overflow-hidden rounded-3xl bg-gradient-hero p-5 text-primary-foreground shadow-elevated"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide opacity-80">
+                  Active booking
+                </p>
+                <p className="mt-1 text-xl font-bold">Tap to view QR ticket</p>
+                <p className="mt-1 text-sm opacity-90">
+                  Ends {new Date(activeRes.end_time).toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white/20 p-3 backdrop-blur">
+                <Zap className="h-7 w-7" />
+              </div>
+            </div>
+          </Link>
+        )}
+
+        <div className="mt-6 grid grid-cols-3 gap-3">
+          <QuickAction to="/reservations" icon={History} label="History" />
+          <QuickAction to="/vehicles" icon={Car} label="Vehicles" />
+          <QuickAction to="/profile" icon={Clock} label="Profile" />
+        </div>
+
+        <div className="mt-8 flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">Nearby parking</h2>
+          <span className="text-xs text-muted-foreground">
+            {filtered.length} lot{filtered.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        {isLoading ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-56 animate-pulse rounded-3xl bg-card shadow-soft"
+              />
+            ))}
           </div>
-          <h2 className="text-lg font-semibold">Phase 2 coming next</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Live Google Maps, nearby parking cards, filters, parking details and
-            slot reservation will arrive in the next phase.
-          </p>
-        </section>
+        ) : (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {filtered.map((lot, i) => (
+              <LotCard key={lot.id} lot={lot} index={i} />
+            ))}
+            {filtered.length === 0 && (
+              <div className="col-span-full rounded-3xl border border-dashed border-border bg-card/60 p-10 text-center text-sm text-muted-foreground">
+                No parking lots match "{query}".
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      <BottomNav />
     </div>
+  );
+}
+
+function QuickAction({
+  to,
+  icon: Icon,
+  label,
+}: {
+  to: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: any;
+  label: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex flex-col items-center gap-2 rounded-3xl border border-border bg-card px-3 py-4 shadow-soft transition hover:-translate-y-0.5 hover:shadow-elevated"
+    >
+      <div className="rounded-2xl bg-accent p-2.5">
+        <Icon className="h-5 w-5 text-primary" />
+      </div>
+      <span className="text-xs font-medium">{label}</span>
+    </Link>
+  );
+}
+
+function LotCard({ lot, index }: { lot: Lot; index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 * index, duration: 0.35 }}
+    >
+      <Link
+        to="/lots/$id"
+        params={{ id: lot.id }}
+        className="group block overflow-hidden rounded-3xl border border-border bg-card shadow-soft transition hover:-translate-y-0.5 hover:shadow-elevated"
+      >
+        <div className="relative h-40 w-full overflow-hidden bg-secondary">
+          {lot.image_url && (
+            <img
+              src={lot.image_url}
+              alt={lot.name}
+              className="h-full w-full object-cover transition group-hover:scale-105"
+              loading="lazy"
+            />
+          )}
+          <div className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold shadow-soft">
+            ${Number(lot.hourly_price).toFixed(2)}/hr
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-base font-semibold">{lot.name}</h3>
+            <div className="flex shrink-0 items-center gap-1 text-xs font-medium">
+              <Star className="h-3.5 w-3.5 fill-warning text-warning" />
+              {lot.rating?.toFixed(1) ?? "—"}
+              <span className="text-muted-foreground">
+                ({lot.review_count})
+              </span>
+            </div>
+          </div>
+          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            {lot.address}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(lot.amenities || []).slice(0, 3).map((a) => (
+              <span
+                key={a}
+                className="rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-medium text-accent-foreground"
+              >
+                {a}
+              </span>
+            ))}
+          </div>
+        </div>
+      </Link>
+    </motion.div>
   );
 }
