@@ -203,7 +203,7 @@ function HomePage() {
           <QuickAction to="/profile" icon={Clock} label="Profile" />
         </div>
 
-        <div className="mt-8 flex items-baseline justify-between">
+        <div id="nearby-parking" className="mt-8 flex items-baseline justify-between scroll-mt-20">
           <h2 className="text-lg font-semibold">Nearby parking</h2>
           <span className="text-xs text-muted-foreground">
             {filtered.length} lot{filtered.length === 1 ? "" : "s"}
