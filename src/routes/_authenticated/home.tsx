@@ -143,9 +143,7 @@ function HomePage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            document
-              .getElementById("nearby-parking")
-              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            navigate({ to: "/search", search: { q: query || undefined } });
           }}
           className="mt-5 flex items-center gap-2 rounded-full border border-border bg-card p-1.5 pl-4 shadow-soft focus-within:border-primary"
         >
@@ -153,6 +151,7 @@ function HomePage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => navigate({ to: "/search", search: { q: query || undefined } })}
             placeholder="Search by name, address, city…"
             className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
           />
