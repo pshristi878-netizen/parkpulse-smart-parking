@@ -177,3 +177,12 @@
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid oklch(1 0 0 / 0.4);
 }
+
+/* Leaflet: dim map tiles in dark mode (markers live in a separate pane) */
+.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
+}
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--color-secondary);
+}

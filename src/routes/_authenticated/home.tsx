@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/park/Logo";
 import { BottomNav } from "@/components/park/BottomNav";
+import { LotMap } from "@/components/park/LotMap";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -44,6 +45,8 @@ type Lot = {
   review_count: number;
   amenities: string[] | null;
   total_slots: number;
+  latitude: number;
+  longitude: number;
 };
 
 type SlotStat = {
@@ -86,7 +89,7 @@ function HomePage() {
       const { data, error } = await supabase
         .from("parking_lots")
         .select(
-          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots",
+          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots,latitude,longitude",
         )
         .eq("is_active", true)
         .order("rating", { ascending: false });
@@ -335,6 +338,29 @@ function HomePage() {
           <QuickAction to="/vehicles" icon={Car} label="Vehicles" />
           <QuickAction to="/profile" icon={Clock} label="Profile" />
         </div>
+
+        {!isLoading && filtered.length > 0 && (
+          <div className="mt-8">
+            <div className="mb-3 flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold">Parking map</h2>
+              <span className="text-xs text-muted-foreground">Live pricing</span>
+            </div>
+            <LotMap
+              height={300}
+              lots={filtered.map((l) => ({
+                id: l.id,
+                name: l.name,
+                address: l.address,
+                latitude: l.latitude,
+                longitude: l.longitude,
+                hourly_price: l.hourly_price,
+                available: availabilityMap[l.id]?.available,
+                total: availabilityMap[l.id]?.total,
+              }))}
+              onSelect={(id) => navigate({ to: "/lots/$id", params: { id } })}
+            />
+          </div>
+        )}
 
         <div id="nearby-parking" className="mt-8 flex items-baseline justify-between scroll-mt-20">
           <h2 className="text-lg font-semibold">Nearby parking</h2>

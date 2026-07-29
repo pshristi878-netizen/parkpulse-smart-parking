@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "react-qr-code";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { useState } from "react";
 import {
@@ -34,6 +34,9 @@ function ReservationDetail() {
   const qc = useQueryClient();
   const [payMethod, setPayMethod] = useState<"upi" | "card" | "wallet">("upi");
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState<{ ref: string; method: string } | null>(
+    null,
+  );
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["reservation", id],
@@ -91,7 +94,7 @@ function ReservationDetail() {
         body: `$${Number(data.total_amount).toFixed(2)} paid via ${payMethod.toUpperCase()}.`,
         action_url: `/reservations/${id}`,
       });
-      toast.success("Payment received. Your ticket is active!");
+      setSuccess({ ref, method: payMethod });
       qc.invalidateQueries();
       refetch();
     } catch (e) {
@@ -342,6 +345,56 @@ function ReservationDetail() {
           </Link>
         </div>
       </main>
+
+      <AnimatePresence>
+        {success && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-6 backdrop-blur-sm"
+            onClick={() => setSuccess(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-4xl bg-card p-7 text-center shadow-elevated"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 15 }}
+                className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-primary shadow-glow"
+              >
+                <CheckCircle2 className="h-11 w-11 text-primary-foreground" />
+              </motion.div>
+              <h2 className="mt-5 text-2xl font-bold">Payment successful</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your ticket is now active. Show the QR code at entry.
+              </p>
+              <dl className="mt-5 space-y-1.5 rounded-2xl bg-secondary p-4 text-sm">
+                <Row
+                  label="Amount paid"
+                  value={`$${Number(data.total_amount).toFixed(2)}`}
+                  bold
+                />
+                <Row label="Method" value={success.method.toUpperCase()} />
+                <Row label="Reference" value={success.ref} />
+              </dl>
+              <button
+                onClick={() => setSuccess(null)}
+                className="mt-5 w-full rounded-full bg-gradient-primary py-3.5 text-base font-semibold text-primary-foreground shadow-glow transition hover:opacity-95"
+              >
+                View my ticket
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <BottomNav />
     </div>
   );

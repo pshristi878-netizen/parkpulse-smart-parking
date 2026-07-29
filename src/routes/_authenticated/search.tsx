@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Search as SearchIcon, SlidersHorizontal, Star, X } from "lucide-react";
+import { ArrowLeft, List, Map as MapIcon, MapPin, Search as SearchIcon, SlidersHorizontal, Star, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/park/BottomNav";
+import { LotMap } from "@/components/park/LotMap";
 
 type Lot = {
   id: string;
@@ -17,6 +18,8 @@ type Lot = {
   review_count: number;
   amenities: string[] | null;
   total_slots: number;
+  latitude: number;
+  longitude: number;
 };
 
 type SearchParams = { q?: string };
@@ -45,6 +48,7 @@ function SearchPage() {
   const [minRating, setMinRating] = useState<number>(0);
   const [sort, setSort] = useState<SortKey>("rating");
   const [showFilters, setShowFilters] = useState(false);
+  const [view, setView] = useState<"list" | "map">("list");
 
   useEffect(() => {
     setQuery(initialQ ?? "");
@@ -68,7 +72,7 @@ function SearchPage() {
       const { data, error } = await supabase
         .from("parking_lots")
         .select(
-          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots",
+          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots,latitude,longitude",
         )
         .eq("is_active", true);
       if (error) throw error;
@@ -223,14 +227,60 @@ function SearchPage() {
           </div>
         )}
 
-        <div className="mb-3 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold">
-            {query ? `Results for "${query}"` : "All parking"}
-          </h1>
-          <span className="text-xs text-muted-foreground">
-            {results.length} lot{results.length === 1 ? "" : "s"}
-          </span>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-lg font-semibold">
+              {query ? `Results for "${query}"` : "All parking"}
+            </h1>
+            <span className="text-xs text-muted-foreground">
+              {results.length} lot{results.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1 shadow-soft">
+            <button
+              onClick={() => setView("list")}
+              aria-pressed={view === "list"}
+              className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                view === "list"
+                  ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                  : "text-muted-foreground hover:bg-secondary"
+              }`}
+            >
+              <List className="h-3.5 w-3.5" /> List
+            </button>
+            <button
+              onClick={() => setView("map")}
+              aria-pressed={view === "map"}
+              className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                view === "map"
+                  ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                  : "text-muted-foreground hover:bg-secondary"
+              }`}
+            >
+              <MapIcon className="h-3.5 w-3.5" /> Map
+            </button>
+          </div>
         </div>
+
+        {view === "map" && !isLoading && results.length > 0 && (
+          <div className="mb-4">
+            <LotMap
+              height={460}
+              lots={results.map((l) => ({
+                id: l.id,
+                name: l.name,
+                address: l.address,
+                latitude: l.latitude,
+                longitude: l.longitude,
+                hourly_price: l.hourly_price,
+              }))}
+              onSelect={(id) => navigate({ to: "/lots/$id", params: { id } })}
+            />
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              Tap a price marker to open the parking lot.
+            </p>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2">
@@ -255,7 +305,7 @@ function SearchPage() {
               Reset
             </button>
           </div>
-        ) : (
+        ) : view === "map" ? null : (
           <div className="grid gap-4 md:grid-cols-2">
             {results.map((lot, i) => (
               <motion.div

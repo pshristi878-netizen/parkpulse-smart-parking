@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AppHeader } from "@/components/park/AppHeader";
 import { BottomNav } from "@/components/park/BottomNav";
+import { LotMap } from "@/components/park/LotMap";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/lots/$id")({
@@ -224,6 +225,40 @@ function LotDetail() {
             )}
           </div>
         </div>
+
+        {typeof lot.latitude === "number" && typeof lot.longitude === "number" && (
+          <section className="mt-6">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Location</h2>
+              <a
+                href={`https://www.openstreetmap.org/directions?to=${lot.latitude},${lot.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold shadow-soft hover:bg-secondary"
+              >
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                Directions
+              </a>
+            </div>
+            <LotMap
+              height={240}
+              zoom={15}
+              lots={[
+                {
+                  id: lot.id,
+                  name: lot.name,
+                  address: lot.address,
+                  latitude: lot.latitude,
+                  longitude: lot.longitude,
+                  hourly_price: lot.hourly_price,
+                  available: stats.avail,
+                  total: stats.total,
+                },
+              ]}
+              activeId={lot.id}
+            />
+          </section>
+        )}
 
         <section className="mt-6 rounded-3xl border border-border bg-card p-5 shadow-soft">
           <div className="flex items-baseline justify-between">
