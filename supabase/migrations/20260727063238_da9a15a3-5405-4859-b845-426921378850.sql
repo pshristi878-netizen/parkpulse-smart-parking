@@ -299,7 +299,7 @@ VALUES
   ('Charminar Public Parking', 'Charminar Road, Ghansi Bazaar', 'Hyderabad', 17.3616, 78.4747, 3.50, 4.3, 76, ARRAY['CCTV','Covered'], 20, 'https://images.unsplash.com/photo-1470224114660-3f6686c562eb?w=800', 'Budget-friendly covered spots near Charminar.');
 
 -- Seed slots for each lot
-DO $$
+DO Rs
 DECLARE
   lot RECORD;
   i INT;
