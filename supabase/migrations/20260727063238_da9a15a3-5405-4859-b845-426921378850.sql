@@ -293,10 +293,10 @@ CREATE POLICY "notifications_own" ON public.notifications FOR ALL TO authenticat
 -- =========================================================
 INSERT INTO public.parking_lots (name, address, city, latitude, longitude, hourly_price, rating, review_count, amenities, total_slots, image_url, description)
 VALUES
-  ('Downtown Central Garage', '123 Market St', 'San Francisco', 37.7897, -122.4000, 6.00, 4.7, 234, ARRAY['EV Charging','24/7 Security','Covered','CCTV'], 40, 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800', 'Multi-level covered garage in the heart of downtown.'),
-  ('Union Square ParkPro', '350 Post St', 'San Francisco', 37.7880, -122.4074, 8.50, 4.8, 512, ARRAY['Valet','EV Charging','Covered'], 30, 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800', 'Premium covered parking with valet.'),
-  ('Marina Blue Lot', '2100 Marina Blvd', 'San Francisco', 37.8060, -122.4370, 4.00, 4.4, 98, ARRAY['Open Air','CCTV'], 25, 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=800', 'Open-air lot near the waterfront.'),
-  ('Mission District Parking', '2500 Mission St', 'San Francisco', 37.7566, -122.4185, 3.50, 4.3, 76, ARRAY['CCTV','Covered'], 20, 'https://images.unsplash.com/photo-1470224114660-3f6686c562eb?w=800', 'Budget-friendly covered spots in the Mission.');
+  ('MG Road Smart Parking', 'MG Road, Brigade Road Junction', 'Bengaluru', 12.9752, 77.6069, 6.00, 4.7, 234, ARRAY['EV Charging','24/7 Security','Covered','CCTV'], 40, 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800', 'Multi-level covered garage in the heart of MG Road.'),
+  ('Connaught Place Parking', 'Block A, Connaught Place', 'New Delhi', 28.6328, 77.2197, 8.50, 4.8, 512, ARRAY['Valet','EV Charging','Covered'], 30, 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800', 'Premium covered parking at Connaught Place with valet.'),
+  ('Marine Drive Parking', 'Marine Drive, Netaji Subhash Chandra Bose Road', 'Mumbai', 18.9439, 72.8231, 4.00, 4.4, 98, ARRAY['Open Air','CCTV'], 25, 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=800', 'Open-air lot with a scenic view near the waterfront.'),
+  ('Charminar Public Parking', 'Charminar Road, Ghansi Bazaar', 'Hyderabad', 17.3616, 78.4747, 3.50, 4.3, 76, ARRAY['CCTV','Covered'], 20, 'https://images.unsplash.com/photo-1470224114660-3f6686c562eb?w=800', 'Budget-friendly covered spots near Charminar.');
 
 -- Seed slots for each lot
 DO $$
