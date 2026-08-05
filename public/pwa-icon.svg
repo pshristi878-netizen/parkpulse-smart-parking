@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34C759;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#30D158;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <rect width="512" height="512" rx="112" fill="url(#grad)"/>
+  <!-- Parking Pin shape -->
+  <path d="M256 96 C195 96 146 145 146 206 C146 287 256 416 256 416 C256 416 366 287 366 206 C366 145 317 96 256 96 Z" fill="white" opacity="0.2"/>
+  <!-- Letter P -->
+  <text x="256" y="320" font-family="SF Pro Display, -apple-system, Helvetica Neue, sans-serif" font-size="240" font-weight="800" fill="white" text-anchor="middle" dominant-baseline="auto">P</text>
+</svg>

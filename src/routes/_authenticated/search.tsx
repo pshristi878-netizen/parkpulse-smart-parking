@@ -17,7 +17,23 @@ type Lot = {
   review_count: number;
   amenities: string[] | null;
   total_slots: number;
+  latitude: number | null;
+  longitude: number | null;
 };
+
+type UserPos = { lat: number; lng: number };
+
+function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 type SearchParams = { q?: string };
 
@@ -45,6 +61,14 @@ function SearchPage() {
   const [minRating, setMinRating] = useState<number>(0);
   const [sort, setSort] = useState<SortKey>("rating");
   const [showFilters, setShowFilters] = useState(false);
+  const [userPos, setUserPos] = useState<UserPos | null>(null);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => { /* permission denied or unavailable — silently skip */ },
+    );
+  }, []);
 
   useEffect(() => {
     setQuery(initialQ ?? "");
@@ -68,7 +92,7 @@ function SearchPage() {
       const { data, error } = await supabase
         .from("parking_lots")
         .select(
-          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots",
+          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots,latitude,longitude",
         )
         .eq("is_active", true);
       if (error) throw error;
@@ -292,6 +316,11 @@ function SearchPage() {
                         <MapPin className="h-3.5 w-3.5" />
                         <span className="line-clamp-1">{lot.address}</span>
                       </p>
+                      {userPos && lot.latitude != null && lot.longitude != null && (
+                        <span className="text-xs text-primary font-medium">
+                          {haversine(userPos.lat, userPos.lng, lot.latitude, lot.longitude).toFixed(1)} km away
+                        </span>
+                      )}
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-sm font-bold text-primary">

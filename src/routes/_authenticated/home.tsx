@@ -44,7 +44,23 @@ type Lot = {
   review_count: number;
   amenities: string[] | null;
   total_slots: number;
+  latitude: number | null;
+  longitude: number | null;
 };
+
+type UserPos = { lat: number; lng: number };
+
+function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 type SlotStat = {
   lot_id: string;
@@ -56,6 +72,14 @@ function HomePage() {
   const [name, setName] = useState("there");
   const [query, setQuery] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userPos, setUserPos] = useState<UserPos | null>(null);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => { /* permission denied or unavailable — silently skip */ },
+    );
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -86,7 +110,7 @@ function HomePage() {
       const { data, error } = await supabase
         .from("parking_lots")
         .select(
-          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots",
+          "id,name,address,city,hourly_price,image_url,rating,review_count,amenities,total_slots,latitude,longitude",
         )
         .eq("is_active", true)
         .order("rating", { ascending: false });
@@ -355,7 +379,7 @@ function HomePage() {
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {filtered.map((lot, i) => (
-              <LotCard key={lot.id} lot={lot} index={i} availability={availabilityMap[lot.id]} />
+              <LotCard key={lot.id} lot={lot} index={i} availability={availabilityMap[lot.id]} userPos={userPos} />
             ))}
             {filtered.length === 0 && (
               <div className="col-span-full rounded-3xl border border-dashed border-border bg-card/60 p-10 text-center text-sm text-muted-foreground">
@@ -415,7 +439,11 @@ function QuickAction({
   );
 }
 
-function LotCard({ lot, index, availability }: { lot: Lot; index: number; availability?: { available: number; total: number } }) {
+function LotCard({ lot, index, availability, userPos }: { lot: Lot; index: number; availability?: { available: number; total: number }; userPos?: UserPos | null }) {
+  const dist =
+    userPos && lot.latitude != null && lot.longitude != null
+      ? haversine(userPos.lat, userPos.lng, lot.latitude, lot.longitude)
+      : null;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -462,6 +490,9 @@ function LotCard({ lot, index, availability }: { lot: Lot; index: number; availa
             <MapPin className="h-3.5 w-3.5" />
             {lot.address}
           </p>
+          {dist != null && (
+            <span className="text-xs text-primary font-medium">{dist.toFixed(1)} km away</span>
+          )}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {(lot.amenities || []).slice(0, 3).map((a) => (
               <span

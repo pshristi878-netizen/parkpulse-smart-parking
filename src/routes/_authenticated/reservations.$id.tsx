@@ -3,13 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "react-qr-code";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CheckCircle2,
   Clock,
   CreditCard,
   MapPin,
-  Ticket,
+  Navigation,
+  Smartphone,
   Wallet,
   XCircle,
 } from "lucide-react";
@@ -28,6 +29,67 @@ export const Route = createFileRoute("/_authenticated/reservations/$id")({
   component: ReservationDetail,
 });
 
+// ─── Countdown Timer ──────────────────────────────────────────────────────────
+
+function CountdownTimer({ expiresAt }: { expiresAt: string }) {
+  const [secondsLeft, setSecondsLeft] = useState<number>(() =>
+    Math.max(
+      Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000),
+      0,
+    ),
+  );
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (secondsLeft <= 0) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+        <XCircle className="h-4 w-4 shrink-0" />
+        Reservation expired — your slot has been released.
+      </div>
+    );
+  }
+
+  const minutes = Math.floor(secondsLeft / 60);
+  const seconds = secondsLeft % 60;
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  const isWarning = secondsLeft > 120;
+
+  return (
+    <div
+      className={`mt-3 flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${
+        isWarning
+          ? "border-orange-400/30 bg-orange-500/10 text-orange-500"
+          : "border-destructive/30 bg-destructive/10 text-destructive"
+      }`}
+    >
+      <Clock className="h-4 w-4 shrink-0" />
+      <span>
+        Reservation expires in{" "}
+        <span className="font-mono text-base">
+          {mm}:{ss}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 function ReservationDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
@@ -41,7 +103,7 @@ function ReservationDetail() {
       const { data, error } = await supabase
         .from("reservations")
         .select(
-          "*,parking_lots(name,address,image_url),parking_slots(slot_number,floor,slot_type)",
+          "*,parking_lots(name,address,image_url,latitude,longitude),parking_slots(slot_number,floor,slot_type)",
         )
         .eq("id", id)
         .single();
@@ -179,10 +241,27 @@ function ReservationDetail() {
   const isDone = data.status === "completed";
   const isCancelled = data.status === "cancelled";
 
+  // Show countdown for confirmed/pending reservations that have an expiry timestamp
+  const showCountdown =
+    (data.status === "confirmed" || data.status === "pending") &&
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    !!(data as any).reservation_expires_at;
+
+  // Show directions for active/confirmed reservations whose lot has coordinates
+  const showDirections =
+    (isActive || data.status === "confirmed") &&
+    lot?.latitude != null &&
+    lot?.longitude != null;
+
+  const mapsUrl = showDirections
+    ? `https://www.google.com/maps/dir/?api=1&destination=${lot.latitude},${lot.longitude}`
+    : "";
+
   return (
     <div className="min-h-screen bg-background pb-40">
       <AppHeader back title="Booking" />
       <main className="mx-auto max-w-3xl px-5 pt-4">
+        {/* ── Booking header card ─────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -207,7 +286,7 @@ function ReservationDetail() {
                 Slot {slot?.slot_number} · Floor {slot?.floor}
               </p>
             </div>
-            <Ticket className="h-10 w-10 opacity-80" />
+            <Smartphone className="h-10 w-10 opacity-80" />
           </div>
 
           {(paid || isActive || isDone) && (
@@ -237,6 +316,28 @@ function ReservationDetail() {
           </div>
         </motion.div>
 
+        {/* ── Feature 1: Countdown timer ──────────────────────────────────── */}
+        {showCountdown && (
+          <CountdownTimer
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            expiresAt={(data as any).reservation_expires_at}
+          />
+        )}
+
+        {/* ── Feature 2: Get Directions button ────────────────────────────── */}
+        {showDirections && (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-3 text-sm font-semibold shadow-soft transition hover:bg-accent"
+          >
+            <Navigation className="h-4 w-4" />
+            Get Directions
+          </a>
+        )}
+
+        {/* ── Summary ─────────────────────────────────────────────────────── */}
         <section className="mt-5 rounded-3xl border border-border bg-card p-5 shadow-soft">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Summary
@@ -256,16 +357,22 @@ function ReservationDetail() {
           </dl>
         </section>
 
+        {/* ── Payment section ─────────────────────────────────────────────── */}
         {!paid && !isCancelled && (
           <section className="mt-5 rounded-3xl border border-border bg-card p-5 shadow-soft">
             <h2 className="text-lg font-semibold">Payment</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Complete payment within 15 minutes to keep your slot.
             </p>
+            {/* Feature 3: UPI now uses Smartphone icon */}
             <div className="mt-4 grid grid-cols-3 gap-2">
               {(["upi", "card", "wallet"] as const).map((m) => {
                 const Icon =
-                  m === "card" ? CreditCard : m === "wallet" ? Wallet : Ticket;
+                  m === "card"
+                    ? CreditCard
+                    : m === "wallet"
+                      ? Wallet
+                      : Smartphone;
                 return (
                   <button
                     key={m}
@@ -303,6 +410,7 @@ function ReservationDetail() {
           </section>
         )}
 
+        {/* ── Paid / check-out section ─────────────────────────────────────── */}
         {paid && !isDone && !isCancelled && (
           <section className="mt-5 rounded-3xl border border-border bg-card p-5 shadow-soft">
             <div className="flex items-center gap-3">
@@ -310,7 +418,9 @@ function ReservationDetail() {
                 <CheckCircle2 className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">Paid · {payment?.method?.toUpperCase()}</p>
+                <p className="font-semibold">
+                  Paid · {payment?.method?.toUpperCase()}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   Ref {payment?.transaction_ref}
                 </p>
@@ -326,6 +436,7 @@ function ReservationDetail() {
           </section>
         )}
 
+        {/* ── Cancelled banner ────────────────────────────────────────────── */}
         {isCancelled && (
           <div className="mt-5 flex items-center gap-3 rounded-3xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
             <XCircle className="h-5 w-5" />
@@ -346,6 +457,8 @@ function ReservationDetail() {
     </div>
   );
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function Row({
   label,

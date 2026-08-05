@@ -20,6 +20,10 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# PWA — generated service worker files (copied from dist/ by build plugin)
+public/sw.js
+public/workbox-*.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -98,6 +98,37 @@ function AdminDashboard() {
     },
   });
 
+  const { data: dailyRevenue = [] } = useQuery({
+    queryKey: ["admin_daily_revenue"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("payments")
+        .select("paid_at,amount")
+        .eq("status", "paid");
+
+      // Build the last 7 days scaffold
+      const days: { date: string; label: string; revenue: number }[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        const label = d.toLocaleDateString("en", { weekday: "short" });
+        days.push({ date: dateStr, label, revenue: 0 });
+      }
+
+      // Accumulate paid amounts into the matching day
+      (data || []).forEach((p) => {
+        if (!p.paid_at) return;
+        const dateStr = (p.paid_at as string).split("T")[0];
+        const day = days.find((d) => d.date === dateStr);
+        if (day) day.revenue += Number(p.amount);
+      });
+
+      return days;
+    },
+    refetchInterval: 30000,
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -141,7 +172,7 @@ function AdminDashboard() {
         />
       </div>
 
-      {/* Charts */}
+      {/* Charts — top row */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Slot Status Pie */}
         <div className="rounded-3xl border border-border bg-card p-5 shadow-soft">
@@ -209,6 +240,39 @@ function AdminDashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Daily Revenue Bar Chart — full width */}
+      <div className="rounded-3xl border border-border bg-card p-5 shadow-soft">
+        <h3 className="text-base font-semibold mb-4">Daily Revenue — Last 7 Days</h3>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={dailyRevenue} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              tickFormatter={(v: number) => `$${v}`}
+              axisLine={false}
+              tickLine={false}
+              width={48}
+            />
+            <Tooltip
+              formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+              cursor={{ fill: "hsl(var(--accent))" }}
+            />
+            <Bar
+              dataKey="revenue"
+              fill="oklch(0.72 0.19 148)"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={56}
+            />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

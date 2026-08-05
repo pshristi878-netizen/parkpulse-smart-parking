@@ -10,6 +10,7 @@ import {
   Car,
   Clock,
   MapPin,
+  Navigation,
   ShieldCheck,
   Star,
 } from "lucide-react";
@@ -44,12 +45,25 @@ const typeIcon: Record<Slot["slot_type"], typeof Car> = {
   bike: Bike,
 };
 
+/** Sort floors: 'G' first, then remaining values numerically/alphabetically. */
+function sortFloors(floors: string[]): string[] {
+  return [...floors].sort((a, b) => {
+    if (a === "G") return -1;
+    if (b === "G") return 1;
+    const na = Number(a);
+    const nb = Number(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b);
+  });
+}
+
 function LotDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Slot | null>(null);
   const [hours, setHours] = useState(2);
   const [booking, setBooking] = useState(false);
+  const [activeFloor, setActiveFloor] = useState<string | null>(null);
 
   const { data: lot, isLoading } = useQuery({
     queryKey: ["lot", id],
@@ -78,6 +92,28 @@ function LotDetail() {
     refetchInterval: 10000,
   });
 
+  const floors = useMemo(() => {
+    const unique = Array.from(
+      new Set(slots.map((s) => s.floor ?? "G")),
+    );
+    return sortFloors(unique);
+  }, [slots]);
+
+  // Initialise / auto-correct activeFloor whenever floors list changes.
+  const currentFloor = useMemo(() => {
+    if (floors.length === 0) return null;
+    if (activeFloor && floors.includes(activeFloor)) return activeFloor;
+    return floors[0];
+  }, [floors, activeFloor]);
+
+  const visibleSlots = useMemo(
+    () =>
+      currentFloor
+        ? slots.filter((s) => (s.floor ?? "G") === currentFloor)
+        : slots,
+    [slots, currentFloor],
+  );
+
   const stats = useMemo(() => {
     const avail = slots.filter((s) => s.status === "available").length;
     return { avail, total: slots.length };
@@ -86,6 +122,11 @@ function LotDetail() {
   const price = lot ? Number(lot.hourly_price) * hours : 0;
   const tax = price * 0.08;
   const total = price + tax;
+
+  const directionsUrl =
+    lot?.latitude != null && lot?.longitude != null
+      ? `https://www.google.com/maps/dir/?api=1&destination=${lot.latitude},${lot.longitude}`
+      : null;
 
   const book = async () => {
     if (!selected || !lot) return;
@@ -163,6 +204,7 @@ function LotDetail() {
     <div className="min-h-screen bg-background pb-40">
       <AppHeader back />
       <main className="mx-auto max-w-6xl px-5 pt-4">
+        {/* ── Lot header card ── */}
         <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-soft">
           {lot.image_url && (
             <img
@@ -225,7 +267,21 @@ function LotDetail() {
           </div>
         </div>
 
-        <section className="mt-6 rounded-3xl border border-border bg-card p-5 shadow-soft">
+        {/* ── Get Directions button ── */}
+        {directionsUrl && (
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-primary px-5 py-3 text-sm font-semibold text-primary transition hover:bg-primary/10 sm:w-auto"
+          >
+            <Navigation className="h-4 w-4" />
+            Get Directions
+          </a>
+        )}
+
+        {/* ── Slot picker ── */}
+        <section className="mt-4 rounded-3xl border border-border bg-card p-5 shadow-soft">
           <div className="flex items-baseline justify-between">
             <h2 className="text-lg font-semibold">Choose your slot</h2>
             <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
@@ -235,8 +291,33 @@ function LotDetail() {
             </div>
           </div>
 
+          {/* Floor tabs */}
+          {floors.length > 1 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {floors.map((floor) => (
+                <button
+                  key={floor}
+                  onClick={() => {
+                    setActiveFloor(floor);
+                    // Deselect slot if it's on a different floor
+                    if (selected && (selected.floor ?? "G") !== floor) {
+                      setSelected(null);
+                    }
+                  }}
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                    currentFloor === floor
+                      ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                      : "border border-border bg-secondary hover:bg-accent"
+                  }`}
+                >
+                  {floor === "G" ? "Ground" : `Floor ${floor}`}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-8">
-            {slots.map((s) => {
+            {visibleSlots.map((s) => {
               const Icon = typeIcon[s.slot_type];
               const isSel = selected?.id === s.id;
               const disabled = s.status !== "available";
